@@ -21,6 +21,9 @@ We will gather images and nutritional data from:
 
 ## Data Visualization
 - Display food recognition results with estimated weight, calorie, and macronutrient breakdown.
+- Create pie charts to show the proportion of macronutrients (protein, carbs, fats) in each identified food item.
+- Implement bar graphs to compare calorie content across different food items in a meal.
+- Design a simple, color-coded nutritional label for each recognized food item, similar to standard food packaging labels.
 
 ## Test Plan
 - Use 80% of data for training and 20% for testing.
