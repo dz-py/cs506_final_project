@@ -23,6 +23,8 @@ We will gather images and nutritional data from:
 - Display food recognition results with estimated weight, calorie, and macronutrient breakdown.
 - Create pie charts to show the proportion of macronutrients (protein, carbs, fats) in each identified food item.
 - Implement bar graphs to compare calorie content across different food items in a meal.
+- Utilize residual plots to measure accuracy of the prediction to test the model
+- Isolate parameters to examine the importance of each parameter on accuracy
 - Design a simple, color-coded nutritional label for each recognized food item, similar to standard food packaging labels.
 
 ## Test Plan
