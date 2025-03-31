@@ -5,17 +5,16 @@ from tensorflow.keras.layers import Dense, Flatten
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 import pickle
-import matplotlib.pyplot as plt
 
 # Step 1: Load Data with Augmentation
 def load_data(train_dir, val_dir):
     datagen = ImageDataGenerator(
         rescale=1./255,
-        rotation_range=30,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        zoom_range=0.2,
+        rotation_range=40,
+        width_shift_range=0.3,
+        height_shift_range=0.3,
+        shear_range=0.3,
+        zoom_range=0.3,
         horizontal_flip=True,
         fill_mode='nearest'
     )
@@ -41,7 +40,7 @@ val_dir = os.path.join(os.getcwd(), "dataset_split", "val")
 train_gen, val_gen = load_data(train_dir, val_dir)
 
 # Step 2: Build Model with Transfer Learning
-def build_food_classifier(input_shape=(224, 224, 3), num_classes=256):
+def build_food_classifier(input_shape=(224, 224, 3), num_classes=8):
     base_model = ResNet50(weights='imagenet', include_top=False, input_shape=input_shape)
     base_model.trainable = False  # Freeze base layers initially
 
@@ -65,7 +64,7 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weig
 history = model.fit(
     train_gen,
     validation_data=val_gen,
-    epochs=30,
+    epochs=50,
     steps_per_epoch=len(train_gen),
     validation_steps=len(val_gen),
     callbacks=[lr_schedule, early_stopping]
@@ -73,7 +72,8 @@ history = model.fit(
 
 # Step 4: Save Model and History
 os.makedirs("models", exist_ok=True)
-model.save(os.path.join("models", "food_classifier_256.h5"))
+model.save(os.path.join("models", "food_classifier_8_classes.h5"))
 
-with open('models/training_history_256.pkl', 'wb') as f:
+with open('models/training_history_8_classes.pkl', 'wb') as f:
     pickle.dump(history.history, f)
+
