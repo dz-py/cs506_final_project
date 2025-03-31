@@ -2,34 +2,31 @@ import os
 import shutil
 import random
 
-def split_dataset(input_dir, output_dir, train_ratio=0.7, val_ratio=0.15):
-    categories = os.listdir(input_dir)
+def split_dataset(input_dir, output_dir, train_ratio=0.8):
+    """
+    Split a single-category dataset into training and validation sets.
+    """
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(os.path.join(output_dir, "train"), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, "val"), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, "test"), exist_ok=True)
+    train_dir = os.path.join(output_dir, "train", "rice")
+    val_dir = os.path.join(output_dir, "val", "rice")
+    os.makedirs(train_dir, exist_ok=True)
+    os.makedirs(val_dir, exist_ok=True)
 
-    for category in categories:
-        category_path = os.path.join(input_dir, category)
-        if not os.path.isdir(category_path):
-            continue
+    images = [img for img in os.listdir(input_dir) if img.endswith(".jpg")]
+    random.shuffle(images)
 
-        images = [img for img in os.listdir(category_path) if img.endswith(".jpg")]
-        random.shuffle(images)
+    train_split = int(len(images) * train_ratio)
+    train_images = images[:train_split]
+    val_images = images[train_split:]
 
-        train_split = int(len(images) * train_ratio)
-        val_split = int(len(images) * (train_ratio + val_ratio))
-
-        train_images = images[:train_split]
-        val_images = images[train_split:val_split]
-        test_images = images[val_split:]
-
-        for img_set, folder in zip([train_images, val_images, test_images], ["train", "val", "test"]):
-            output_category_path = os.path.join(output_dir, folder, category)
-            os.makedirs(output_category_path, exist_ok=True)
-
-            for img in img_set:
-                shutil.copy(os.path.join(category_path, img), os.path.join(output_category_path, img))
+    for img in train_images:
+        shutil.copy(os.path.join(input_dir, img), os.path.join(train_dir, img))
+    
+    for img in val_images:
+        shutil.copy(os.path.join(input_dir, img), os.path.join(val_dir, img))
 
 # Example usage:
-split_dataset("data/UECFOOD256", "data", train_ratio=0.7, val_ratio=0.15)
+input_dir = os.path.join(os.getcwd(), "dataset", "train", "train1")
+output_dir = os.path.join(os.getcwd(), "dataset")
+split_dataset(input_dir, output_dir)
+
