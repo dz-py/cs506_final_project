@@ -8,25 +8,42 @@ with open('models/training_history.pkl', 'rb') as f:
 # Ensure the directory for saving the plot exists
 save_path = 'training_history.png'
 
-# Plot training history
+print(history.keys())  # Ensure it has ['accuracy', 'val_accuracy', 'loss', 'val_loss']
+print(history['accuracy'])
+print(len(history['accuracy']), len(history['val_accuracy']))
+print(len(history['loss']), len(history['val_loss']))
+
+
+epochs_range = range(1, len(history['accuracy']) + 1)  # Start from 1
+
 def plot_training_history(history):
-    plt.figure(figsize=(12, 4))
+    epochs_range = range(1, len(history['accuracy']) + 1)
 
-    # Plot accuracy
+    plt.figure(figsize=(14, 5))
+
+    # Accuracy Plot
     plt.subplot(1, 2, 1)
-    plt.plot(history['accuracy'], label='Train Accuracy')
-    plt.plot(history['val_accuracy'], label='Val Accuracy')
+    plt.plot(epochs_range, history['accuracy'], marker='o', linestyle='-', label='Train Accuracy')
+    plt.plot(epochs_range, history['val_accuracy'], marker='s', linestyle='--', label='Val Accuracy', color='red')
+    plt.xticks(epochs_range)  # Force x-axis to show all epochs
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
     plt.legend()
-    plt.title('Accuracy over Epochs')
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.title('Training & Validation Accuracy')
 
-    # Plot loss
+    # Loss Plot
     plt.subplot(1, 2, 2)
-    plt.plot(history['loss'], label='Train Loss')
-    plt.plot(history['val_loss'], label='Val Loss')
+    plt.plot(epochs_range, history['loss'], marker='o', linestyle='-', label='Train Loss')
+    plt.plot(epochs_range, history['val_loss'], marker='s', linestyle='--', label='Val Loss', color='red')
+    plt.xticks(epochs_range)
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
     plt.legend()
-    plt.title('Loss over Epochs')
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.title('Training & Validation Loss')
 
-    # Save the plot as an image
-    plt.savefig(save_path)  # Save to file
+
+    plt.savefig(save_path)
 
 plot_training_history(history)
