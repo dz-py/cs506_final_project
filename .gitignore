@@ -1,1 +1,4 @@
 venv/
+models/rice_classifier.h5
+models/training_history.pkl
+training_history
