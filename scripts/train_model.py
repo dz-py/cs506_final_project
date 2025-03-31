@@ -64,7 +64,7 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weig
 history = model.fit(
     train_gen,
     validation_data=val_gen,
-    epochs=50,
+    epochs=30,
     steps_per_epoch=len(train_gen),
     validation_steps=len(val_gen),
     callbacks=[lr_schedule, early_stopping]
