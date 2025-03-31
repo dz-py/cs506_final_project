@@ -17,5 +17,3 @@ def preprocess_images(input_dir, output_dir, img_size=(224, 224)):
             img_resized = cv2.resize(img, img_size)
             cv2.imwrite(os.path.join(output_category_path, img_file), img_resized)
 
-# Example usage:
-# preprocess_images("data/train", "data/train_processed")

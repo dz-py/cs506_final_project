@@ -2,7 +2,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 # Load history from file
-with open('models/training_history.pkl', 'rb') as f:
+with open('models/training_history_256.pkl', 'rb') as f:
     history = pickle.load(f)
 
 # Ensure the directory for saving the plot exists
