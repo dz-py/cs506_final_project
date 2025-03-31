@@ -1,3 +1,4 @@
+import os
 import cv2
 
 def preprocess_images(input_dir, output_dir, img_size=(224, 224)):
@@ -12,7 +13,7 @@ def preprocess_images(input_dir, output_dir, img_size=(224, 224)):
             img = cv2.imread(img_path)
             if img is None:
                 continue
-            
+                
             img_resized = cv2.resize(img, img_size)
             cv2.imwrite(os.path.join(output_category_path, img_file), img_resized)
 

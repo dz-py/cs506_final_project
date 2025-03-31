@@ -1,6 +1,6 @@
 from scripts.fetch_nutrition_api import get_food_nutrition
 
-def predict_calories_and_macros(food_name, weight_grams):
+def predict_calories_and_macros(food_name: str, weight_grams: float) -> dict:
     """
     Predict calories and macronutrients (protein, carbs, fats) for a given food item and weight.
 
