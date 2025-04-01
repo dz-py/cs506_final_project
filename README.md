@@ -33,7 +33,7 @@ We will gather images and nutritional data from:
 - Compare model estimates with actual nutrition data.
 
 ## Midterm Progress Report
-
+[https://www.youtube.com/watch?v=yOOj1t0BaPU](https://www.youtube.com/watch?v=yOOj1t0BaPU)
 ### Data Processing
 1. Dataset Organization:
    - Successfully organized four categories of the UEC FOOD 256 dataset into training and validation sets
