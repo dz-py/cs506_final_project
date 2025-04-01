@@ -85,6 +85,24 @@ We will gather images and nutritional data from:
 ![Training History](assets/training_history.png)
 *Training and validation metrics over epochs. The left plot shows the accuracy progression, while the right plot displays the loss values. The model demonstrates good convergence with both training and validation metrics improving over time. The gap between training and validation metrics indicates some overfitting, which we plan to address in future iterations.*
 
+### How to Run The Project
+1. Clone this repository.
+2. Make a virtual environment and activate it:
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+3. Install required Python dependencies:
+    ```bash
+    pip3 install -r requirements.txt
+    ```
+4. Run the following files in order:
+   ```bash
+   python3 scripts/preprocess_data.py
+   python3 scripts/split_dataset.py
+   python3 scripts/train_model.py
+   ```
+
 ### Next Steps
 1. Calorie Estimation:
    - Integrate with USDA FoodData Central API for nutritional information
