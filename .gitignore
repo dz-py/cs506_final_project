@@ -4,3 +4,6 @@ models/training_history.pkl
 models/food_classifier_256.keras
 models/training_history_256.keras
 training_history
+.env
+__pycache__/
+food-101/
