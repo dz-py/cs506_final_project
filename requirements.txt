@@ -1,10 +1,8 @@
 numpy
 pandas
-torch
-torchvision
 scikit-learn
-tqdm
+opencv-python
 Pillow
-albumentations
+tensorflow>=2.8
 matplotlib
-requests
+
