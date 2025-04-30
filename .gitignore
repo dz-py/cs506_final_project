@@ -4,6 +4,7 @@ models/training_history.pkl
 models/food_classifier_256.keras
 models/training_history_256.keras
 <<<<<<< HEAD
+<<<<<<< HEAD
 training_history
 .env
 __pycache__/
@@ -12,3 +13,5 @@ resnet152_food6_best.pt/
 =======
 training_history
 >>>>>>> 322c689efe5a9c47bbe25612a41116ea9a933217
+=======
+>>>>>>> 0c1f338943f437d07331c4c4aa3be5795f982f8e
