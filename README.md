@@ -1,113 +1,277 @@
-# Food Recognition and Macro Estimation using Trained Model
+# Food Recognition and Classification System Final Report
 
-## Project Description
-This project aims to create a model that analyzes food images to estimate calories and macronutrients (protein, carbs, fats). Users can take a picture of their meal, and the model will provide corresponding nutritional information.
+## Project Evolution
 
-## Project Goals
-- Identify food items from images.
-- Estimate macronutrients and calorie content.
-- Build a machine learning model for food recognition.
+### Midterm Report Overview
+Our midterm overview aimed to create a comprehensive food recognition system that could:
+- Identify food items from images
+- Estimate macronutrients and calorie content
+- Build a machine learning model for food recognition
 
-## Data Collection
-We will gather images and nutritional data from:
-- Open source food datasets (e.g., Food-101, UEC FOOD 256).
-- Nutrition databases like USDA FoodData Central.
+While this was an ambitious goal, we realized during development that focusing on accurate food classification first would provide a stronger foundation for future nutritional analysis.
 
-## Model Training
-- Use deep learning (e.g., CNNs like ResNet) for food classification.
-- Implement weight estimation techniques using image processing and reference data.
-- Retrieve nutritional data via an external API.
-- Implement and test using TensorFlow/PyTorch/Sckit-Learn.
+### Final Project Refinements
+For our final project, we've made several improvements to the model:
 
-## Data Visualization
-- Display food recognition results with estimated weight, calorie, and macronutrient breakdown.
-- Create pie charts to show the proportion of macronutrients (protein, carbs, fats) in each identified food item.
-- Implement bar graphs to compare calorie content across different food items in a meal.
-- Utilize residual plots to measure accuracy of the prediction to test the model
-- Isolate parameters to examine the importance of each parameter on accuracy
-- Design a simple, color-coded nutritional label for each recognized food item, similar to standard food packaging labels.
+1. **Focused Scope**:
+   - Reduced from 101 food categories to 5 main categories plus an "unknown" class
+   - This allowed for more accurate classification and better handling of edge cases
+   - Categories chosen based on common food groups and distinct visual characteristics
+   - Integrated USDA FoodData Central API for nutritional information
 
-## Test Plan
-- Use 80% of data for training and 20% for testing.
-- Evaluate accuracy using real-world images.
-- Compare model estimates with actual nutrition data.
+2. **Enhanced Data Processing**:
+   - Implemented more sophisticated image preprocessing
+   - Added data augmentation techniques specific to food images
+   - Created a balanced dataset with equal representation of each category
+   - Implemented intelligent dataset splitting and filtering
 
-## Midterm Progress Report
-[https://www.youtube.com/watch?v=yOOj1t0BaPU](https://www.youtube.com/watch?v=yOOj1t0BaPU)
-### Data Processing
-1. Dataset Organization:
-   - Successfully organized four categories of the UEC FOOD 256 dataset into training and validation sets
-   - Implemented data splitting with 80% training and 20% validation ratio
-   - Preprocessed images to a consistent size (224x224) for model input
+3. **Model Architecture Improvements**:
+   - Fine-tuned the ResNet50 model specifically for our food categories
+   - Implemented transfer learning with a focus on food-specific features
+   - Added an "unknown" category to handle out-of-distribution images
+   - Enhanced prediction visualization with confidence scores
 
-2. Data Augmentation:
-   - We create variations of our training images to help the model learn better:
-     - Rotating images (up to 30 degrees) to recognize food from different angles
-     - Shifting images horizontally and vertically (20% range) to handle different positions
-     - Stretching and squishing images (20% range) to handle different distances
-     - Zooming in and out (20% range) to handle different sizes
-     - Flipping images horizontally to handle different orientations
-   - This helps the model learn to recognize food regardless of how it's photographed
-   - We also normalize the images (adjusting brightness and contrast) to make training more consistent
+## Technical Implementation
 
-### Model Implementation
-1. Architecture:
-   - We're using a pre-trained model called ResNet50 that already knows how to recognize general features in images
-     - Think of it like a model that already knows how to identify basic shapes, textures, and patterns from being trained on millions of images
-   - We've modified this model to specifically recognize food by:
-     - Keeping the model's basic knowledge of image features (like edges, shapes, textures)
-     - Adding new layers that learn to identify food-specific features
-     - Setting up the final layer to classify different types of food
-   - This approach is called "transfer learning" - we're taking a model that's good at general image recognition and teaching it to focus on food
+### Data Processing Pipeline
 
-2. Training Process:
-   - We've set up the training to be efficient and prevent the model from learning too much from the training data:
-     - The model stops training when it stops improving (early stopping)
-     - It adjusts its learning speed automatically when progress slows down
-     - We process 32 images at a time to balance speed and accuracy
-   - The model is set up to recognize multiple types of food at once
+1. **Preprocessing** (`preprocess_data.py`):
+   - Image resizing to 224x224 pixels
+   - Normalization of pixel values
+   - Advanced image transformations:
+     - Random rotations (±30 degrees)
+     - Horizontal and vertical shifts
+     - Zoom variations
+     - Brightness and contrast adjustments
 
-### Preliminary Results
-1. Model Performance:
-   - Successfully trained the model on the food dataset
-   - Implemented visualization of training metrics:
-     - Training and validation accuracy plots
-     - Training and validation loss plots
-   - Model shows promising convergence patterns
+2. **Dataset Management** (`split_dataset.py`, `filter_food.py`):
+   - Intelligent dataset splitting (80% training, 20% validation)
+   - Category balancing
+   - Quality control for image selection
+   - Creation of unseen test samples
 
-2. Data Visualization:
-   - Created comprehensive training history visualizations
-   - Implemented plots showing:
-     - Training vs. Validation accuracy over epochs
-     - Training vs. Validation loss over epochs
-   - Visualizations help in monitoring model performance and identifying potential issues
+3. **Model Architecture** (`train_model.py`):
+   - ResNet50 base model with pre-trained weights
+   - Custom classification head for our specific categories
+   - Transfer learning with fine-tuning
+   - Early stopping and learning rate scheduling
+   - Data augmentation during training
 
-![Training History](assets/training_history.png)
-*Training and validation metrics over epochs. The left plot shows the accuracy progression, while the right plot displays the loss values. The model demonstrates good convergence with both training and validation metrics improving over time. The gap between training and validation metrics indicates some overfitting, which we plan to address in future iterations.*
+4. **Prediction and Visualization** (`predict_food.py`):
+   - Loads trained model and processes new images
+   - Generates confidence scores for predictions
+   - Creates visualizations showing:
+     - Original food image
+     - Predicted class with confidence score
+     - Nutritional information from USDA database
+   - Handles unknown food items appropriately
 
-### How to Run The Project
-1. Clone this repository.
-2. Make a virtual environment and activate it:
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-3. Install required Python dependencies:
-    ```bash
-    pip3 install -r requirements.txt
-    ```
-4. Run the following files in order:
-   ```bash
-   python3 scripts/preprocess_data.py
-   python3 scripts/split_dataset.py
-   python3 scripts/train_model.py
-   ```
+5. **Training Visualization** (`visualize_results.py`):
+   - Training history plots
+   - Accuracy and loss curves
+   - Fine-tuning phase indicators
+   - Model performance metrics
 
-### Next Steps
-1. Calorie Estimation:
-   - Integrate with USDA FoodData Central API for nutritional information
+### Key Improvements from Midterm Report
 
-2. Model Improvements:
-   - Fine-tune hyperparameters
-   - Implement additional data augmentation techniques
-   - Add model evaluation metrics
+1. **Data Quality**:
+   - Implemented stricter quality control for training images
+   - Added data augmentation specific to food images
+   - Created a more balanced dataset
+   - Better handling of edge cases
+
+2. **Model Performance**:
+   - Reduced overfitting through better regularization
+   - Improved handling of edge cases with the "unknown" category
+   - Better generalization to real-world food images
+   - More accurate confidence scoring
+
+3. **System Robustness**:
+   - Added error handling for various edge cases
+   - Improved preprocessing pipeline
+   - Better handling of different image formats and qualities
+   - Integration with USDA API for nutritional data
+
+## Results and Analysis
+
+Our final model shows significant improvements over the midterm version:
+
+1. **Classification Accuracy**:
+   - Higher accuracy on the 5 main categories
+   - Better handling of unknown food items
+   - More consistent predictions across different lighting conditions
+   - Reliable confidence scoring
+
+2. **Training Efficiency**:
+   - Faster convergence during training
+   - Better utilization of computational resources
+   - More stable learning curves
+
+3. **Visualization and Prediction**:
+   - Clear presentation of predictions with confidence scores
+   - Integration of nutritional information from USDA database
+   - Handling of unknown food items
+   - Comprehensive training history visualization
+
+## Results and Visualizations
+
+The project includes several visualization outputs that demonstrate the model's performance across different types of food images:
+
+### Training Progress Comparison
+
+#### Midterm Training History
+![Midterm Training History](assets/midterm_training_history.png)
+*Figure 1: Midterm model training history showing initial performance. The model exhibited higher variance in validation accuracy, longer convergence time, and less stable learning curves.*
+
+#### Final Training History
+![Final Training History](assets/final_training_history.png)
+*Figure 2: Final model training history demonstrating significant improvements. The two-phase training approach shows more stable learning curves, faster convergence, and lower variance in validation accuracy.*
+
+Key Improvements:
+1. **Training Stability**:
+   - Final model shows smoother learning curves
+   - Reduced oscillation in validation accuracy
+   - More consistent improvement across epochs
+
+2. **Convergence Speed**:
+   - Final model reaches optimal performance faster
+   - Better utilization of early stopping
+   - More efficient learning process
+
+3. **Generalization**:
+   - Smaller gap between training and validation accuracy
+   - Better handling of unseen data
+   - More reliable predictions
+
+### Model Predictions
+
+#### Seen Training Samples
+![Ramen Prediction](assets/seen_ramen.png)
+- Example of the model's performance on images it was trained on
+- Shows high confidence predictions with nutritional information
+- Demonstrates the model's ability to recognize familiar food items
+
+#### Unseen Samples from Trained Classes
+![Strawberry Shortcake Prediction](assets/unseen_strawberry_shortcake.png)
+- Shows how the model performs on new images of known food categories
+- Demonstrates generalization ability within trained classes
+- Includes nutritional information from USDA database
+
+#### Unknown Food Items
+![Spring Roll Prediction](assets/unknown_spring_roll.png)
+- Example of the model handling food items not in its training set
+- Demonstrates the model's ability to identify unfamiliar foods
+
+Each visualization includes:
+- Original food image
+- Actual and predicted class
+- Confidence score
+- Nutritional information (when available)
+- Additional context about the image type
+
+## How to Build and Run the Code
+
+### Prerequisites
+- Conda (Anaconda or Miniconda) - Required for Python version management
+- USDA API key (for nutritional information)
+
+### Python Version Requirements
+This project requires Python 3.8-3.10 for compatibility with TensorFlow. Using conda is recommended to manage the Python environment, as it allows for precise version control and dependency management.
+
+### Installation and Setup
+
+1. Clone this repository:
+```bash
+git clone [repository-url]
+cd cs506_final_project
+```
+
+2. Create and activate the conda environment:
+```bash
+# This will create a new conda environment with Python 3.8
+make install
+
+# Activate the environment
+conda activate food_recognition
+```
+
+3. Uploading a .env file is not a good practice, but we did it in order to speed up the grading process. If you want to use your own API key, feel free to do so.  
+
+### Running the Project
+
+The project can be run using the following commands in order:
+
+```bash
+make preprocess  # Preprocess the dataset
+make split      # Split the dataset into training and validation sets
+make train      # Train the model
+make visualize  # Generate visualizations
+make predict    # Run predictions on new images
+```
+
+Alternatively, you can run all steps in sequence:
+```bash
+make all
+```
+
+### Testing
+
+The project includes a test suite to verify core functionality:
+
+1. **Test Setup**:
+   - Tests are located in the `tests/` directory
+   - Uses pytest for test execution
+   - Includes a test image for prediction verification
+
+2. **Running Tests**:
+```bash
+make test
+```
+
+3. **Test Features**:
+   - Model loading and basic functionality
+   - Prediction format validation
+   - Input/output shape verification
+   - File existence checks
+
+### Environment Management
+
+The project uses conda for environment management to ensure compatibility with TensorFlow. The Makefile handles:
+- Creating a conda environment with Python 3.8
+- Installing all required dependencies
+- Managing the environment during execution
+- Running tests in the correct environment
+
+To remove the conda environment and clean up temporary files:
+```bash
+make clean
+```
+
+### Troubleshooting
+
+If you encounter any issues with the environment setup:
+
+1. Ensure conda is properly installed and in your PATH
+2. Check that the conda environment was created successfully:
+```bash
+conda env list
+```
+3. Verify Python version in the environment:
+```bash
+conda activate food_recognition
+python --version
+```
+4. If issues persist, try recreating the environment:
+```bash
+make clean
+make install
+```
+
+5. For test failures:
+   - Ensure the model files exist in the `models/` directory
+   - Verify the test image exists in the `tests/` directory
+   - Check that all dependencies are installed correctly
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
