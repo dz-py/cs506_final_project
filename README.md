@@ -120,11 +120,11 @@ The project includes several visualization outputs that demonstrate the model's 
 ### Training Progress Comparison
 
 #### Midterm Training History
-![Midterm Training History](assets/midterm_training_history.png)
+![Midterm Training History](imgs/midterm_training_history.png)
 *Figure 1: Midterm model training history showing initial performance. The model exhibited higher variance in validation accuracy, longer convergence time, and less stable learning curves.*
 
 #### Final Training History
-![Final Training History](assets/final_training_history.png)
+![Final Training History](imgs/final_training_history.png)
 *Figure 2: Final model training history demonstrating significant improvements. The two-phase training approach shows more stable learning curves, faster convergence, and lower variance in validation accuracy.*
 
 Key Improvements:
@@ -146,19 +146,19 @@ Key Improvements:
 ### Model Predictions
 
 #### Seen Training Samples
-![Ramen Prediction](assets/seen_ramen.png)
+![Ramen Prediction](imgs/seen_ramen.png)
 - Example of the model's performance on images it was trained on
 - Shows high confidence predictions with nutritional information
 - Demonstrates the model's ability to recognize familiar food items
 
 #### Unseen Samples from Trained Classes
-![Strawberry Shortcake Prediction](assets/unseen_strawberry_shortcake.png)
+![Strawberry Shortcake Prediction](imgs/unseen_strawberry_shortcake.png)
 - Shows how the model performs on new images of known food categories
 - Demonstrates generalization ability within trained classes
 - Includes nutritional information from USDA database
 
 #### Unknown Food Items
-![Spring Roll Prediction](assets/unknown_spring_roll.png)
+![Spring Roll Prediction](imgs/unknown_spring_roll.png)
 - Example of the model handling food items not in its training set
 - Demonstrates the model's ability to identify unfamiliar foods
 
