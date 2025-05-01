@@ -27,11 +27,14 @@ def get_usda_nutrition(food_name):
     url = 'https://api.nal.usda.gov/fdc/v1/foods/search'
     headers = {'Content-Type': 'application/json'}
     
+    processed_name = food_name.replace('_', ' ').title()
+
     params = {
-        'query': food_name,
+        'query': processed_name,
         'dataType': ["Foundation", "Survey (FNDDS)", "Branded"],
-        'pageSize': 3,
-        'sortBy': 'dataType.keyword'
+        'pageSize': 5,
+        'sortBy': 'dataType.keyword',
+        'queryOperator': 'AND'
     }
 
     try:
@@ -43,36 +46,61 @@ def get_usda_nutrition(food_name):
             timeout=10
         )
         response.raise_for_status()
-        return extract_nutrients(response.json())
+        return find_best_match(processed_name, response.json())
         
     except requests.exceptions.RequestException as e:
         logging.error(f"USDA API Error: {e}")
         return None
 
-def extract_nutrients(api_response):
-    """Extract key nutrients from USDA API response"""
+def find_best_match(query, api_response):
+    """Finds the closest matching food item"""
+    from difflib import get_close_matches
+    
     if not api_response.get('foods'):
         return None
-        
-    food_data = api_response['foods'][0]
+    
+    # Extract descriptions for matching
+    descriptions = [f['description'].lower() for f in api_response['foods']]
+    
+    # Find best match using difflib
+    matches = get_close_matches(query.lower(), descriptions, n=1, cutoff=0.8)
+    
+    if matches:
+        best_match = next(f for f in api_response['foods'] 
+                         if f['description'].lower() == matches[0])
+        return extract_nutrients(best_match)
+    
+    # Fallback for partial matches
+    for food in api_response['foods']:
+        if query.lower() in food['description'].lower():
+            return extract_nutrients(food)
+    
+    return None
+
+def extract_nutrients(food_entry):
+    """Extracts nutrients with enhanced validation"""
     nutrients = {
-        'description': food_data.get('description', 'Unknown Food Item'),
-        'fdcId': food_data.get('fdcId')
+        'description': food_entry.get('description', 'Unknown Food'),
+        'fdcId': food_entry.get('fdcId')
     }
     
-    # Nutrient ID mapping (https://fdc.nal.usda.gov/api-guide.html)
     nutrient_map = {
-        '1008': 'calories',  # Energy (kcal)
-        '1003': 'protein',   # Protein (g)
-        '1004': 'fat',       # Total lipid (fat) (g)
-        '1005': 'carbs'      # Carbohydrate (g)
+        '1008': 'calories',
+        '1003': 'protein',
+        '1004': 'fat',
+        '1005': 'carbs'
     }
     
-    for nutrient in food_data.get('foodNutrients', []):
+    for nutrient in food_entry.get('foodNutrients', []):
         nutrient_id = str(nutrient.get('nutrientId'))
         if nutrient_id in nutrient_map:
             nutrients[nutrient_map[nutrient_id]] = nutrient.get('value', 0)
-            
+    
+    # Validate required fields
+    required_nutrients = ['calories']
+    if not any(nutrients.get(k) for k in required_nutrients):
+        return None
+    
     return nutrients
 
 # =========================
