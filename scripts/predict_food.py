@@ -10,6 +10,70 @@ import numpy as np
 import pickle
 import logging
 import random
+import requests
+from dotenv import load_dotenv
+load_dotenv()
+
+# =========================
+# USDA API Integration
+# =========================
+def get_usda_nutrition(food_name):
+    """Get nutritional data from USDA FoodData Central API"""
+    api_key = os.getenv('USDA_API_KEY')
+    if not api_key:
+        logging.error("USDA_API_KEY environment variable not set")
+        return None
+
+    url = 'https://api.nal.usda.gov/fdc/v1/foods/search'
+    headers = {'Content-Type': 'application/json'}
+    
+    params = {
+        'query': food_name,
+        'dataType': ["Foundation", "Survey (FNDDS)", "Branded"],
+        'pageSize': 3,
+        'sortBy': 'dataType.keyword'
+    }
+
+    try:
+        response = requests.post(
+            url,
+            headers=headers,
+            params={'api_key': api_key},
+            json=params,
+            timeout=10
+        )
+        response.raise_for_status()
+        return extract_nutrients(response.json())
+        
+    except requests.exceptions.RequestException as e:
+        logging.error(f"USDA API Error: {e}")
+        return None
+
+def extract_nutrients(api_response):
+    """Extract key nutrients from USDA API response"""
+    if not api_response.get('foods'):
+        return None
+        
+    food_data = api_response['foods'][0]
+    nutrients = {
+        'description': food_data.get('description', 'Unknown Food Item'),
+        'fdcId': food_data.get('fdcId')
+    }
+    
+    # Nutrient ID mapping (https://fdc.nal.usda.gov/api-guide.html)
+    nutrient_map = {
+        '1008': 'calories',  # Energy (kcal)
+        '1003': 'protein',   # Protein (g)
+        '1004': 'fat',       # Total lipid (fat) (g)
+        '1005': 'carbs'      # Carbohydrate (g)
+    }
+    
+    for nutrient in food_data.get('foodNutrients', []):
+        nutrient_id = str(nutrient.get('nutrientId'))
+        if nutrient_id in nutrient_map:
+            nutrients[nutrient_map[nutrient_id]] = nutrient.get('value', 0)
+            
+    return nutrients
 
 # =========================
 # Configuration
@@ -194,6 +258,11 @@ def predict_and_print(image_path, actual_class_name, image_type_label, threshold
         top_predicted_class_name = class_names_map.get(predicted_index, "ModelOutputIndexError")
         confidence_score = predictions[0][predicted_index]
 
+        # Get nutritional data if above threshold
+        nutrition_data = None
+        if confidence_score >= threshold:
+            nutrition_data = get_usda_nutrition(top_predicted_class_name)
+
         print(f"\nResults for {image_type_label} Image:")
         print(f"  File: {os.path.basename(image_path)}")
         print(f"  Actual Class: {actual_class_name}") # This is the folder name from the sample dataset
@@ -205,6 +274,17 @@ def predict_and_print(image_path, actual_class_name, image_type_label, threshold
             print(f"  Predicted Class: Other (Below Threshold)")
             print(f"  Confidence: {confidence_score:.2%} (Threshold: {threshold:.0%})")
             print(f"  (Top prediction was: {top_predicted_class_name})")
+
+        # Add nutritional information
+        if nutrition_data:
+            print("\n  Nutritional Information (Per 100G):")
+            print(f"  Food: {nutrition_data['description']}")
+            print(f"  Calories: {nutrition_data.get('calories', 'N/A')} kcal")
+            print(f"  Protein: {nutrition_data.get('protein', 'N/A')}g")
+            print(f"  Fat: {nutrition_data.get('fat', 'N/A')}g")
+            print(f"  Carbohydrates: {nutrition_data.get('carbs', 'N/A')}g")
+        elif confidence_score >= threshold:
+            print("\n  Nutritional data unavailable for this prediction")
 
         # Add specific notes based on the image_type_label
         if "Unknown Class" in image_type_label:
