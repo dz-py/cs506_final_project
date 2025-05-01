@@ -26,7 +26,7 @@ For our final project, we've made several improvements to the model:
    - Implemented intelligent dataset splitting and filtering
 
 3. **Model Architecture Improvements**:
-   - Fine-tuned the ResNet50 model specifically for our food categories
+   - Fine-tuned the ResNet152 model specifically for our food categories
    - Implemented transfer learning with a focus on food-specific features
    - Added an "unknown" category to handle out-of-distribution images
    - Enhanced prediction visualization with confidence scores
@@ -51,7 +51,7 @@ For our final project, we've made several improvements to the model:
    - Creation of unseen test samples
 
 3. **Model Architecture** (`train_model.py`):
-   - ResNet50 base model with pre-trained weights
+   - ResNet152 base model with pre-trained weights
    - Custom classification head for our specific categories
    - Transfer learning with fine-tuning
    - Early stopping and learning rate scheduling
@@ -279,4 +279,4 @@ make install
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License. 
