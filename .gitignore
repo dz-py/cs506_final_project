@@ -1,7 +1,7 @@
 venv/
 models/
 training_history
-.env
 __pycache__/
 food-101/
 .DS_Store
+prediction_visualization/
