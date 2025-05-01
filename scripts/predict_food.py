@@ -9,17 +9,23 @@ from tensorflow.keras.applications.resnet import preprocess_input # Use same pre
 import numpy as np
 import pickle
 import logging
-import random # Added for random selection
-# Removed time import if it was only for seeding
+import random
 
 # =========================
 # Configuration
 # =========================
-# Set how many random images to test for each category type
-NUM_SAMPLES_PER_TYPE = 3
+# Set how many random images to test from each category type
+NUM_SAMPLES_PER_CLASS_TO_TEST = 3
 # Set the confidence threshold below which prediction is considered "Other"
 CONFIDENCE_THRESHOLD = 0.60 # e.g., 60% confidence required
-# --- Removed fixed RANDOM_SEED ---
+# Name of the sample dataset directory containing unseen/unknown samples
+UNSEEN_SAMPLE_DIR_NAME = "food-101-unseen-trained-plus-unknown-samples"
+# Name of the 'unknown' class directory within the sample dataset
+UNKNOWN_CLASS_DIR_NAME = "unknown"
+# Name of the directory containing the actual train/val splits used for training
+TRAIN_VAL_SPLIT_DIR_NAME = "dataset_split"
+# Base directory where the filtered dataset (containing the split) resides
+FILTERED_DATA_BASE_DIR_NAME = "food-101-filtered-5main-unknown"
 # =========================
 
 # =========================
@@ -28,26 +34,44 @@ CONFIDENCE_THRESHOLD = 0.60 # e.g., 60% confidence required
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # =========================
-# Path Setup
+# Path Setup (MODIFIED)
 # =========================
-# Determine paths relative to this script's location
 try:
+    # Assumes the script is in a 'scripts' directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
 except NameError:
+    # Fallback if __file__ is not defined (e.g., running interactively)
     script_dir = os.getcwd()
-    logging.warning(f"Could not determine script directory, using current working directory: {script_dir}")
+    if os.path.basename(script_dir).lower() == 'scripts':
+         project_root = os.path.dirname(script_dir)
+    else:
+         project_root = script_dir
+    logging.warning(f"Could not determine script directory reliably, assuming project root is: {project_root}")
 
-project_root = os.path.dirname(script_dir) # Assumes script is in 'scripts' folder
+# Model directory
 model_dir = os.path.join(project_root, "models")
-original_images_dir = os.path.join(project_root, "food-101", "images") # Path to original images
-split_base_dir = os.path.join(project_root, "food-101", "dataset_split") # Path to train/val splits
+# Directory containing the unseen/unknown samples for testing
+unseen_sample_dataset_dir = os.path.join(project_root, UNSEEN_SAMPLE_DIR_NAME)
+# Directory containing the actual train/val splits used for training
+split_base_dir = os.path.join(project_root, FILTERED_DATA_BASE_DIR_NAME, TRAIN_VAL_SPLIT_DIR_NAME)
+# Specific path to the training data directory
+train_dir_path = os.path.join(split_base_dir, "train")
+
 
 # --- Define paths to the necessary files ---
-MODEL_PATH = os.path.join(model_dir, "food_classifier_final.keras")
-CLASS_INDICES_PATH = os.path.join(model_dir, "class_indices.pkl")
+# Use the best model saved by checkpoint
+MODEL_PATH = os.path.join(model_dir, "best_food_classifier.keras")
+CLASS_INDICES_PATH = os.path.join(model_dir, "class_indices.pkl") # Needed for name mapping
 
 # --- Define image size (must match training) ---
 IMG_SIZE = (224, 224)
+
+logging.info(f"Model directory: {model_dir}")
+logging.info(f"Unseen/Unknown sample dataset directory: {unseen_sample_dataset_dir}")
+logging.info(f"Training data directory: {train_dir_path}")
+logging.info(f"Class indices path: {CLASS_INDICES_PATH}")
+logging.info(f"Model path to load: {MODEL_PATH}")
 
 # =========================
 # Load Model and Class Indices
@@ -55,6 +79,7 @@ IMG_SIZE = (224, 224)
 # --- Load the trained model ---
 if not os.path.exists(MODEL_PATH):
     logging.error(f"Model file not found at: {MODEL_PATH}")
+    logging.error("Ensure train_model.py ran and saved the best model.")
     exit(1)
 try:
     logging.info(f"Loading model from {MODEL_PATH}...")
@@ -67,146 +92,80 @@ except Exception as e:
 # --- Load the class indices ---
 if not os.path.exists(CLASS_INDICES_PATH):
     logging.error(f"Class indices file not found at: {CLASS_INDICES_PATH}")
+    logging.error("Ensure train_model.py ran and saved the class indices.")
     exit(1)
 try:
     with open(CLASS_INDICES_PATH, 'rb') as f:
         class_indices = pickle.load(f)
+    # class_indices will map name -> index (e.g., {'beef_carpaccio': 0, ..., 'unknown': 5})
+    # Create inverse mapping (index -> class name)
     class_names_map = {v: k for k, v in class_indices.items()}
-    trained_class_names = sorted(list(class_names_map.values()))
-    logging.info(f"Loaded class indices. Model trained on {len(trained_class_names)} classes: {trained_class_names}")
+    # Get the names of the classes the loaded model expects (should be 6)
+    model_trained_classes = sorted(list(class_names_map.values()))
+    # Specifically identify the main classes (excluding unknown)
+    main_trained_classes = sorted([name for name in model_trained_classes if name != UNKNOWN_CLASS_DIR_NAME])
+    logging.info(f"Loaded class indices. Model expects {len(model_trained_classes)} classes: {model_trained_classes}")
+    logging.info(f"Identified {len(main_trained_classes)} main trained classes: {main_trained_classes}")
 except Exception as e:
     logging.error(f"Error loading class indices: {e}")
     exit(1)
 
 # =========================
-# Find Trained, Untrained, and Unseen Images
+# Find Classes in Sample Dataset (for unseen/unknown tests)
 # =========================
-# (Logic remains the same as previous version)
-if not os.path.isdir(original_images_dir):
-    logging.error(f"Original images directory not found at: {original_images_dir}")
-    exit(1)
-if not os.path.isdir(split_base_dir):
-     logging.error(f"Split dataset directory not found at: {split_base_dir}")
-     exit(1)
-try:
-    all_original_classes = sorted([d for d in os.listdir(original_images_dir) if os.path.isdir(os.path.join(original_images_dir, d))])
-    if not all_original_classes:
-         logging.error(f"No class directories found in {original_images_dir}")
-         exit(1)
-except OSError as e:
-     logging.error(f"Error reading original images directory {original_images_dir}: {e}")
-     exit(1)
-untrained_class_names = sorted(list(set(all_original_classes) - set(trained_class_names)))
-logging.info(f"Found {len(untrained_class_names)} classes the model was not trained on (example: {untrained_class_names[0] if untrained_class_names else 'N/A'}).")
-unseen_images_by_class = {}
-logging.info("Identifying unseen images within trained classes...")
-for class_name in trained_class_names:
-    original_class_path = os.path.join(original_images_dir, class_name)
-    train_class_path = os.path.join(split_base_dir, "train", class_name)
-    val_class_path = os.path.join(split_base_dir, "val", class_name)
+classes_in_unseen_sample_dir = []
+if not os.path.isdir(unseen_sample_dataset_dir):
+    logging.warning(f"Unseen sample dataset directory not found: {unseen_sample_dataset_dir}")
+    logging.warning("Skipping tests on unseen/unknown samples.")
+else:
     try:
-        original_files = set(f for f in os.listdir(original_class_path) if os.path.isfile(os.path.join(original_class_path, f)))
-        seen_files = set()
-        if os.path.isdir(train_class_path):
-            seen_files.update(f for f in os.listdir(train_class_path) if os.path.isfile(os.path.join(train_class_path, f)))
-        if os.path.isdir(val_class_path):
-            seen_files.update(f for f in os.listdir(val_class_path) if os.path.isfile(os.path.join(val_class_path, f)))
-        unseen_files = list(original_files - seen_files)
-        if unseen_files:
-            unseen_images_by_class[class_name] = unseen_files
+        # List all subdirectories (classes) within the unseen sample dataset directory
+        classes_in_unseen_sample_dir = sorted([d for d in os.listdir(unseen_sample_dataset_dir)
+                                       if os.path.isdir(os.path.join(unseen_sample_dataset_dir, d))])
+        if not classes_in_unseen_sample_dir:
+             logging.warning(f"No class subdirectories found in the unseen sample dataset directory: {unseen_sample_dataset_dir}")
         else:
-             logging.warning(f"No unseen images found for trained class: {class_name}")
-    except FileNotFoundError:
-        logging.warning(f"Could not find original or split directory for class: {class_name}. Skipping unseen check for this class.")
+             logging.info(f"Found classes in unseen sample dataset to test: {classes_in_unseen_sample_dir}")
     except OSError as e:
-        logging.error(f"Error processing files for class {class_name}: {e}")
-if not unseen_images_by_class:
-    logging.warning("Could not identify any unseen images for any trained class.")
-
-# =========================
-# Select Multiple Random Images for Testing
-# =========================
-# (Helper functions get_random_image_path and get_random_unseen_image_path remain the same)
-def get_random_image_path(base_dir, selected_classes):
-    if not selected_classes:
-        logging.warning(f"Cannot select image, no classes provided in the list: {selected_classes}")
-        return None, None
-    attempts = 0
-    max_attempts = 5
-    while attempts < max_attempts:
-        chosen_class = random.choice(selected_classes)
-        class_path = os.path.join(base_dir, chosen_class)
-        try:
-            images = [f for f in os.listdir(class_path) if os.path.isfile(os.path.join(class_path, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-            if images:
-                chosen_image = random.choice(images)
-                return os.path.join(class_path, chosen_image), chosen_class
-            else:
-                logging.warning(f"No image files found in directory: {class_path}. Trying another class.")
-        except FileNotFoundError:
-             logging.warning(f"Class directory not found: {class_path}. Trying another class.")
-        except OSError as e:
-            logging.warning(f"Error accessing directory {class_path}: {e}. Trying another class.")
-        attempts += 1
-    logging.error(f"Failed to find a valid image after {max_attempts} attempts for classes: {selected_classes}")
-    return None, None
-
-def get_random_unseen_image_path(base_dir, unseen_map):
-    if not unseen_map:
-        return None, None
-    eligible_classes = list(unseen_map.keys())
-    attempts = 0
-    max_attempts = 5
-    while attempts < max_attempts and eligible_classes:
-        chosen_class = random.choice(eligible_classes)
-        unseen_files = unseen_map.get(chosen_class, []) # Use .get for safety
-        if unseen_files:
-            chosen_image_name = random.choice(unseen_files)
-            return os.path.join(base_dir, chosen_class, chosen_image_name), chosen_class
-        else:
-            logging.warning(f"Class {chosen_class} selected, but its unseen image list is empty. Removing from choices.")
-            eligible_classes.remove(chosen_class)
-        attempts += 1
-    logging.error(f"Failed to find a valid unseen image after {max_attempts} attempts.")
-    return None, None
-
-# (Image selection logic remains the same, using the helper functions)
-trained_seen_images_to_test = []
-logging.info(f"\nSelecting {NUM_SAMPLES_PER_TYPE} random images from TRAINED classes (could be seen or unseen)...")
-for i in range(NUM_SAMPLES_PER_TYPE):
-    path, actual_class = get_random_image_path(original_images_dir, trained_class_names)
-    if path and actual_class:
-        trained_seen_images_to_test.append({"path": path, "actual_class": actual_class})
-    else:
-        logging.warning(f"Could not get sample {i+1} for trained classes.")
-trained_unseen_images_to_test = []
-logging.info(f"\nSelecting {NUM_SAMPLES_PER_TYPE} random UNSEEN images from TRAINED classes...")
-if not unseen_images_by_class:
-    logging.warning("Skipping selection as no unseen images were identified.")
-else:
-    for i in range(NUM_SAMPLES_PER_TYPE):
-        path, actual_class = get_random_unseen_image_path(original_images_dir, unseen_images_by_class)
-        if path and actual_class:
-            trained_unseen_images_to_test.append({"path": path, "actual_class": actual_class})
-        else:
-            logging.warning(f"Could not get sample {i+1} for unseen trained images.")
-untrained_images_to_test = []
-logging.info(f"\nSelecting {NUM_SAMPLES_PER_TYPE} random images from UNTRAINED classes...")
-if not untrained_class_names:
-     logging.warning("Skipping selection of untrained images as no untrained classes were found.")
-else:
-    for i in range(NUM_SAMPLES_PER_TYPE):
-        path, actual_class = get_random_image_path(original_images_dir, untrained_class_names)
-        if path and actual_class:
-            untrained_images_to_test.append({"path": path, "actual_class": actual_class})
-        else:
-             logging.warning(f"Could not get sample {i+1} for untrained classes.")
+         logging.error(f"Error reading unseen sample dataset directory {unseen_sample_dataset_dir}: {e}")
 
 
 # =========================
-# Image Preprocessing Function (same as before)
+# Select Random Images Function
+# =========================
+def get_random_images_from_class(class_dir_path, num_to_select):
+    """Selects a specified number of random image paths from a class directory."""
+    selected_paths = []
+    if not os.path.isdir(class_dir_path): # Add check if class dir exists
+        logging.warning(f"Directory not found during image selection: {class_dir_path}")
+        return []
+    try:
+        images = [f for f in os.listdir(class_dir_path)
+                  if os.path.isfile(os.path.join(class_dir_path, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        if not images:
+            logging.warning(f"No image files found in directory: {class_dir_path}")
+            return []
+
+        num_available = len(images)
+        actual_num_to_select = min(num_available, num_to_select)
+
+        if num_available < num_to_select:
+            logging.warning(f"Directory '{os.path.basename(class_dir_path)}' only has {num_available} images, requested {num_to_select}. Selecting all available.")
+
+        selected_filenames = random.sample(images, actual_num_to_select)
+        selected_paths = [os.path.join(class_dir_path, fname) for fname in selected_filenames]
+
+    except OSError as e:
+        logging.warning(f"Error accessing directory {class_dir_path} during image selection: {e}")
+
+    return selected_paths
+
+
+# =========================
+# Image Preprocessing Function
 # =========================
 def preprocess_single_image(img_path, target_size):
+    """Loads and preprocesses a single image for model prediction."""
     try:
         img = image.load_img(img_path, target_size=target_size)
         img_array = image.img_to_array(img)
@@ -221,63 +180,117 @@ def preprocess_single_image(img_path, target_size):
         return None
 
 # =========================
-# Prediction Function (same as before)
+# Prediction Function
 # =========================
 def predict_and_print(image_path, actual_class_name, image_type_label, threshold):
+    """Preprocesses, predicts, and prints results for a single image, using a confidence threshold."""
     logging.info(f"--- Predicting {image_type_label} Image ---")
-    logging.info(f"Selected Image: {os.path.basename(image_path)} (Actual Class: {actual_class_name})")
+    logging.info(f"Image: {os.path.basename(image_path)} (Actual Class: {actual_class_name})")
     preprocessed_image = preprocess_single_image(image_path, IMG_SIZE)
     if preprocessed_image is not None:
         predictions = model.predict(preprocessed_image, verbose=0)
         predicted_index = np.argmax(predictions[0])
-        top_predicted_class_name = class_names_map.get(predicted_index, "Unknown Class")
+        # Use the loaded map corresponding to the *trained model*
+        top_predicted_class_name = class_names_map.get(predicted_index, "ModelOutputIndexError")
         confidence_score = predictions[0][predicted_index]
+
         print(f"\nResults for {image_type_label} Image:")
         print(f"  File: {os.path.basename(image_path)}")
-        print(f"  Actual Class: {actual_class_name}")
+        print(f"  Actual Class: {actual_class_name}") # This is the folder name from the sample dataset
+
         if confidence_score >= threshold:
             print(f"  Predicted Class: {top_predicted_class_name}")
             print(f"  Confidence: {confidence_score:.2%}")
         else:
-            print(f"  Predicted Class: Other")
-            print(f"  Confidence: {confidence_score:.2%} (Below threshold {threshold:.0%})")
+            print(f"  Predicted Class: Other (Below Threshold)")
+            print(f"  Confidence: {confidence_score:.2%} (Threshold: {threshold:.0%})")
             print(f"  (Top prediction was: {top_predicted_class_name})")
-        if "Untrained Class" in image_type_label:
-             print("  (Note: Model was not trained on this actual class)")
-        elif "Unseen Sample" in image_type_label:
-             print("  (Note: Image from a trained class, but not used during training/validation)")
+
+        # Add specific notes based on the image_type_label
+        if "Unknown Class" in image_type_label:
+             print("  (Note: This image is from the 'unknown' sample category)")
+        elif "Unseen Trained" in image_type_label:
+             print("  (Note: Image from a trained class, but sample was unseen during training/validation)")
+        elif "Seen Training" in image_type_label:
+            print("  (Note: Image from the actual training set)")
+        else:
+             # Fallback for unexpected labels
+             print(f"  (Note: Actual class '{actual_class_name}' tested)")
+
+
     else:
         print(f"\nCould not process {image_type_label} image: {image_path}")
     print("-" * 40) # Separator
 
 # =========================
-# Main Execution (same as before)
+# Main Execution
 # =========================
 if __name__ == "__main__":
 
-    if not trained_seen_images_to_test and not trained_unseen_images_to_test and not untrained_images_to_test:
-         logging.error("No images were selected for testing across all categories. Exiting.")
-         exit()
+    print("\n" + "="*10 + f" TESTING IMAGES " + "="*10)
+    print(f"Using model: {MODEL_PATH}")
+    print(f"Confidence Threshold for 'Other': {CONFIDENCE_THRESHOLD:.0%}")
+    print(f"Testing {NUM_SAMPLES_PER_CLASS_TO_TEST} images per class found...")
 
-    if trained_seen_images_to_test:
-        print("\n" + "="*10 + " PREDICTIONS ON TRAINED CLASSES (RANDOM ORIGINAL SAMPLE) " + "="*10)
-        for img_data in trained_seen_images_to_test:
-            predict_and_print(img_data["path"], img_data["actual_class"], "Trained Class (Random Original)", CONFIDENCE_THRESHOLD)
+    # --- 1. Test images the model was TRAINED on ---
+    print("\n" + "="*10 + " CATEGORY 1: SEEN TRAINING SAMPLES " + "="*10)
+    if not os.path.isdir(train_dir_path):
+        logging.warning(f"Training directory not found ({train_dir_path}). Skipping tests on seen training samples.")
     else:
-        logging.info("No images selected from random original trained classes to predict.")
+        # Iterate through the main classes the model was trained on (excluding unknown)
+        for class_name in main_trained_classes:
+            class_path = os.path.join(train_dir_path, class_name)
+            logging.info(f"\nSelecting training images for class: {class_name}")
+            images_to_test = get_random_images_from_class(class_path, NUM_SAMPLES_PER_CLASS_TO_TEST)
+            if not images_to_test:
+                logging.warning(f"No training images selected for class '{class_name}'. Skipping.")
+                continue
+            # Predict each selected image
+            for img_path in images_to_test:
+                predict_and_print(img_path, class_name, "Seen Training Sample", CONFIDENCE_THRESHOLD)
 
-    if trained_unseen_images_to_test:
-        print("\n" + "="*10 + " PREDICTIONS ON TRAINED CLASSES (UNSEEN SAMPLES) " + "="*10)
-        for img_data in trained_unseen_images_to_test:
-            predict_and_print(img_data["path"], img_data["actual_class"], "Trained Class (Unseen Sample)", CONFIDENCE_THRESHOLD)
+    # --- 2. Test UNSEEN images from TRAINED classes (using the separate sample dataset) ---
+    print("\n" + "="*10 + " CATEGORY 2: UNSEEN TRAINED CLASS SAMPLES " + "="*10)
+    if not classes_in_unseen_sample_dir:
+         logging.warning("No classes found in unseen sample dataset directory. Skipping these tests.")
     else:
-        logging.info("No images selected from unseen samples of trained classes to predict.")
+        # Iterate through the classes found in the unseen sample directory
+        for class_name in classes_in_unseen_sample_dir:
+            # Skip the 'unknown' class here, test it separately
+            if class_name == UNKNOWN_CLASS_DIR_NAME:
+                continue
+            # Check if this class was actually one the model was trained on
+            if class_name not in model_trained_classes:
+                 logging.warning(f"Class '{class_name}' found in unseen sample dir, but not in model's trained classes. Skipping.")
+                 continue
 
-    if untrained_images_to_test:
-        print("\n" + "="*10 + " PREDICTIONS ON UNTRAINED CLASSES " + "="*10)
-        for img_data in untrained_images_to_test:
-            predict_and_print(img_data["path"], img_data["actual_class"], "Untrained Class", CONFIDENCE_THRESHOLD)
+            class_path = os.path.join(unseen_sample_dataset_dir, class_name)
+            logging.info(f"\nSelecting unseen images for trained class: {class_name}")
+            images_to_test = get_random_images_from_class(class_path, NUM_SAMPLES_PER_CLASS_TO_TEST)
+            if not images_to_test:
+                logging.warning(f"No images selected for class '{class_name}' from unseen sample dir. Skipping.")
+                continue
+            # Predict each selected image
+            for img_path in images_to_test:
+                predict_and_print(img_path, class_name, "Unseen Trained Class Sample", CONFIDENCE_THRESHOLD)
+
+
+    # --- 3. Test images from the UNKNOWN class sample ---
+    print("\n" + "="*10 + " CATEGORY 3: UNKNOWN CLASS SAMPLES " + "="*10)
+    unknown_class_path_in_sample = os.path.join(unseen_sample_dataset_dir, UNKNOWN_CLASS_DIR_NAME)
+    if UNKNOWN_CLASS_DIR_NAME not in classes_in_unseen_sample_dir:
+         logging.warning(f"Directory for '{UNKNOWN_CLASS_DIR_NAME}' not found in unseen sample dataset. Skipping these tests.")
     else:
-        logging.info("No images selected from untrained classes to predict.")
+        logging.info(f"\nSelecting images from the '{UNKNOWN_CLASS_DIR_NAME}' sample class...")
+        images_to_test = get_random_images_from_class(unknown_class_path_in_sample, NUM_SAMPLES_PER_CLASS_TO_TEST)
+        if not images_to_test:
+            logging.warning(f"No images selected for class '{UNKNOWN_CLASS_DIR_NAME}' from unseen sample dir. Skipping.")
+        else:
+            # Predict each selected image
+            for img_path in images_to_test:
+                # The 'actual class' is 'unknown' for these samples
+                predict_and_print(img_path, UNKNOWN_CLASS_DIR_NAME, "Unknown Class Sample", CONFIDENCE_THRESHOLD)
+
 
     logging.info("Prediction script finished.")
+
