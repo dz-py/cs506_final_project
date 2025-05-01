@@ -5,3 +5,4 @@ training_history
 __pycache__/
 food-101/
 .DS_Store
+prediction_visualization/
