@@ -214,6 +214,11 @@ Alternatively, you can run all steps in sequence:
 make all
 ```
 
+The model tests its performance on three types of images: familiar training images from food-101-filtered-5main-unknown/dataset_split/train/, new variations of trained categories from food-101-unseen-trained-plus-unknown-samples/, and unfamiliar food items from food-101-unseen-trained-plus-unknown-samples/unknown/. To see the model's predictions, navigate to the prediction_visualization directory created via 
+```bash 
+make predict
+```
+
 ### Testing
 
 The project includes a test suite to verify core functionality:
