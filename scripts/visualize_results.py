@@ -30,7 +30,7 @@ except NameError:
 
 model_dir = os.path.join(project_root, "models")
 history_file_path = os.path.join(model_dir, 'training_history.pkl')
-plot_save_path = os.path.join(model_dir, 'training_history.png')
+plot_save_path = os.path.join(project_root, 'training_history.png')
 
 logging.info(f"Looking for history file at: {history_file_path}")
 
@@ -130,7 +130,7 @@ def plot_training_history(history_dict, epoch_axis, fine_tune_start_epoch=None, 
         except Exception as e:
             logging.error(f"Failed to save plot to {save_path}: {e}")
 
-    plt.show() # Display the plot
+    plt.close() 
 
 # =========================
 # Plot the Training History
