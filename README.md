@@ -173,8 +173,10 @@ Each visualization includes:
 
 ### Prerequisites
 - Conda (Anaconda or Miniconda) - Required for Python version management
-   - For Mac Users: https://docs.conda.io/projects/conda/en/stable/user-guide/install/macos.html
-   - For Windows Users: https://docs.conda.io/projects/conda/en/stable/user-guide/install/windows.html
+   - Installations for Conda:
+     [Windows](https://docs.conda.io/projects/conda/en/stable/user-guide/install/windows.html),
+     [macOS](https://docs.conda.io/projects/conda/en/stable/user-guide/install/macos.html),
+     [Linux](https://docs.conda.io/projects/conda/en/stable/user-guide/install/linux.html)
 - USDA API key (for nutritional information)
 
 ### Python Version Requirements
