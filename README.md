@@ -173,6 +173,8 @@ Each visualization includes:
 
 ### Prerequisites
 - Conda (Anaconda or Miniconda) - Required for Python version management
+   - For Mac Users: https://docs.conda.io/projects/conda/en/stable/user-guide/install/macos.html
+   - For Windows Users: https://docs.conda.io/projects/conda/en/stable/user-guide/install/windows.html
 - USDA API key (for nutritional information)
 
 ### Python Version Requirements
@@ -198,6 +200,15 @@ conda activate food_recognition
 3. Uploading a .env file is not a good practice, but we did it in order to speed up the grading process. If you want to use your own API key, feel free to do so.  
 
 ### Running the Project
+For Windows users, replace:
+```bash
+tensorflow-macos>=2.13.0
+```
+with 
+```bash
+tensorflow>=2.13.0
+```
+in requirements.txt
 
 The project can be run using the following commands in order:
 
